@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — WebScraping Data Service</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body>
+  <div id="toast-container"></div>
+
+  <div class="login-page">
+    <div class="login-card">
+      <div class="login-card-header">
+        <div class="login-logo">🔒</div>
+        <h1>WebScraping Data Service</h1>
+        <p>Sign in to your account to continue</p>
+      </div>
+      <div class="login-card-body">
+        <div id="login-error" class="login-error"></div>
+        <form id="login-form" autocomplete="off">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input id="username" name="username" class="form-control" type="text" placeholder="Enter your username"
+              autocomplete="username" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="password-wrap">
+              <input id="password" name="password" class="form-control" type="password"
+                placeholder="Enter your password" autocomplete="current-password" required />
+              <button type="button" class="password-toggle" id="pwd-toggle" title="Toggle password">👁️</button>
+            </div>
+          </div>
+          <button type="submit" class="login-btn" id="login-btn">
+            <span id="btn-label">Sign In</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── redirect if already logged in
+    const token = localStorage.getItem('access_token');
+    const role = localStorage.getItem('role');
+    if (token) {
+      window.location.href = role === 'ADMIN' ? '/ui/admin/dashboard' : '/ui/user/dashboard';
+    }
+
+    // ── password toggle
+    document.getElementById('pwd-toggle').addEventListener('click', () => {
+      const p = document.getElementById('password');
+      p.type = p.type === 'password' ? 'text' : 'password';
+    });
+
+    // ── toast helper
+    function showToast(msg, type = 'info') {
+      const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+      el.addEventListener('click', () => removeToast(el));
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => removeToast(el), 4000);
+    }
+    function removeToast(el) {
+      el.classList.add('out');
+      setTimeout(() => el.remove(), 220);
+    }
+
+    // ── login form
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('login-btn');
+      const label = document.getElementById('btn-label');
+      const errEl = document.getElementById('login-error');
+      errEl.classList.remove('show');
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      btn.disabled = true;
+      label.innerHTML = '<span class="spinner"></span> Signing in…';
+
+      try {
+        const res = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const json = await res.json();
+
+        if (!res.ok) {
+          const msg = json?.error?.message || json?.detail || 'Invalid credentials';
+          errEl.textContent = msg;
+          errEl.classList.add('show');
+          return;
+        }
+
+        const data = json.data || json;
+
+        let role = 'USER';
+        let jwtUsername = username;
+        try {
+          const payloadB64 = data.access_token.split('.')[1];
+          const payloadJson = atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
+          const jwtPayload = JSON.parse(payloadJson);
+          role = jwtPayload.role || 'USER';
+          jwtUsername = jwtPayload.sub || username;
+        } catch (e) { console.warn('JWT decode failed, defaulting to USER role'); }
+
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        localStorage.setItem('role', role);
+        localStorage.setItem('username', jwtUsername);
+
+        showToast('Login successful! Redirecting…', 'success');
+        setTimeout(() => {
+          window.location.href = role === 'ADMIN' ? '/ui/admin/dashboard' : '/ui/user/dashboard';
+        }, 600);
+      } catch (err) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        label.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+
+</html>

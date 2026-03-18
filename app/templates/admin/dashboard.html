@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Admin Dashboard — WebScraping API</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body>
+    <div id="toast-container"></div>
+
+    <!-- Generic confirm modal -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header">
+                <h3 id="confirm-title">Confirm</h3><button class="modal-close"
+                    onclick="closeModal('confirm-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-msg" style="color:var(--text-muted)"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">Cancel</button>
+                <button class="btn btn-danger" id="confirm-ok-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Product Modal -->
+    <div id="create-product-modal" class="modal-overlay hidden">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Create Product</h3><button class="modal-close"
+                    onclick="closeModal('create-product-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group"><label>Model Number *</label><input id="cp-model" class="form-control"
+                            placeholder="e.g., NP750XGJ-KG1IN" /></div>
+                    <div class="form-group"><label>Brand</label><input id="cp-brand" class="form-control"
+                            placeholder="e.g., Samsung" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Series</label><input id="cp-series" class="form-control"
+                            placeholder="e.g., Galaxy Book4" /></div>
+                    <div class="form-group"><label>Processor</label><input id="cp-processor" class="form-control"
+                            placeholder="e.g., Intel Core 7" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>RAM</label><input id="cp-ram" class="form-control"
+                            placeholder="e.g., 16GB" /></div>
+                    <div class="form-group"><label>Storage</label><input id="cp-storage" class="form-control"
+                            placeholder="e.g., 512GB SSD" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Screen Size</label><input id="cp-screen" class="form-control"
+                            placeholder="e.g., 15.6" /></div>
+                    <div class="form-group"><label>Graphics</label><input id="cp-graphics" class="form-control"
+                            placeholder="e.g., Intel Iris" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Colour</label><input id="cp-colour" class="form-control"
+                            placeholder="e.g., Silver" /></div>
+                    <div class="form-group"><label>Source *</label>
+                        <select id="cp-source" class="form-control">
+                            <option value="AMAZON">AMAZON</option>
+                            <option value="FLIPKART">FLIPKART</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Listing URL *</label><input id="cp-url" class="form-control"
+                            placeholder="https://example.com/product" /></div>
+                    <div class="form-group"><label>Image URL</label><input id="cp-image" class="form-control"
+                            placeholder="https://…/image.jpg" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Price</label><input id="cp-price" class="form-control" type="number"
+                            min="0" step="0.01" placeholder="0.00" /></div>
+                    <div class="form-group"><label>Discount %</label><input id="cp-discount" class="form-control"
+                            type="number" min="0" max="100" placeholder="0" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Rating (0-5)</label><input id="cp-rating" class="form-control"
+                            type="number" min="0" max="5" step="0.1" placeholder="0.0" /></div>
+                    <div class="form-group"><label>Review Count</label><input id="cp-reviews" class="form-control"
+                            type="number" min="0" placeholder="0" /></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('create-product-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitCreateProduct()">Create Product</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Detail Modal -->
+    <div id="product-detail-modal" class="modal-overlay hidden">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3 id="pd-modal-title">Product Details</h3><button class="modal-close"
+                    onclick="closeModal('product-detail-modal')">✕</button>
+            </div>
+            <div class="modal-body" id="pd-modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Update Product Detail Modal -->
+    <div id="update-detail-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Update Product Detail</h3><button class="modal-close"
+                    onclick="closeModal('update-detail-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="upd-product-id" /><input type="hidden" id="upd-source" />
+                <div class="form-row">
+                    <div class="form-group"><label>Price</label><input id="upd-price" class="form-control" type="number"
+                            min="0" step="0.01" /></div>
+                    <div class="form-group"><label>Discount %</label><input id="upd-discount" class="form-control"
+                            type="number" min="0" max="100" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Rating</label><input id="upd-rating" class="form-control"
+                            type="number" min="0" max="5" step="0.1" /></div>
+                    <div class="form-group"><label>Review Count</label><input id="upd-reviews" class="form-control"
+                            type="number" min="0" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Listing URL</label><input id="upd-url" class="form-control" /></div>
+                    <div class="form-group"><label>Image URL</label><input id="upd-image" class="form-control" /></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('update-detail-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitUpdateDetail()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="create-user-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Create User</h3><button class="modal-close" onclick="closeModal('create-user-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>Username *</label><input id="cu-username" class="form-control"
+                        placeholder="lowercase, no spaces" /></div>
+                <div class="form-group"><label>Password *</label><input id="cu-password" class="form-control"
+                        type="password" placeholder="min 6 chars" /></div>
+                <div class="form-group"><label>Role</label>
+                    <select id="cu-role" class="form-control">
+                        <option value="USER">USER</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('create-user-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitCreateUser()">Create User</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="edit-user-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Edit User</h3><button class="modal-close" onclick="closeModal('edit-user-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="eu-id" />
+                <div class="form-group"><label>Username</label><input id="eu-username" class="form-control" /></div>
+                <div class="form-group"><label>Role</label>
+                    <select id="eu-role" class="form-control">
+                        <option value="USER">USER</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('edit-user-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitEditUser()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="change-pwd-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header">
+                <h3>Change Password</h3><button class="modal-close" onclick="closeModal('change-pwd-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="cpwd-id" />
+                <div class="form-group"><label>New Password *</label><input id="cpwd-new" class="form-control"
+                        type="password" placeholder="min 6 chars" /></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('change-pwd-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitChangePassword()">Update Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Activity Log Modal -->
+    <div id="update-log-modal" class="modal-overlay hidden">
+        <div class="modal" style="max-width:420px">
+            <div class="modal-header">
+                <h3>Update Activity Log</h3><button class="modal-close"
+                    onclick="closeModal('update-log-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="ul-id" />
+                <div class="form-group"><label>Retry Count (0–3)</label><input id="ul-retry" class="form-control"
+                        type="number" min="0" max="3" /></div>
+                <div class="form-group" style="flex-direction:row;align-items:center;gap:10px">
+                    <input id="ul-review" type="checkbox" style="width:16px;height:16px" />
+                    <label for="ul-review" style="text-transform:none;letter-spacing:0">Human Review Flag</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('update-log-modal')">Cancel</button>
+                <button class="btn btn-primary" onclick="submitUpdateLog()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Detail Modal -->
+    <div id="log-detail-modal" class="modal-overlay hidden">
+        <div class="modal modal-lg">
+            <div class="modal-header">
+                <h3>Log Detail</h3><button class="modal-close" onclick="closeModal('log-detail-modal')">✕</button>
+            </div>
+            <div class="modal-body" id="log-detail-body"></div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-logo">🛍️</div>
+                <div>
+                    <div class="brand-name">My Dashboard</div>
+                    <div class="brand-sub">Admin Panel</div>
+                </div>
+            </div>
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Overview</div>
+                <div class="nav-item active" onclick="showSection('dashboard')">
+                    <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+                </div>
+                <div class="nav-section-label">Management</div>
+                <div class="nav-item" onclick="showSection('products')">
+                    <span class="nav-icon">📦</span><span class="nav-label">Products</span>
+                </div>
+                <div class="nav-item" onclick="showSection('users')">
+                    <span class="nav-icon">👥</span><span class="nav-label">Users</span>
+                </div>
+                <div class="nav-section-label">Logs & Runs</div>
+                <div class="nav-item" onclick="showSection('activity-logs')">
+                    <span class="nav-icon">📋</span><span class="nav-label">Activity Logs</span>
+                </div>
+                <div class="nav-item" onclick="showSection('scraper-runs')">
+                    <span class="nav-icon">🔄</span><span class="nav-label">Scraping Runs</span>
+                </div>
+                <div class="nav-section-label">AI</div>
+                <div class="nav-item" onclick="showSection('embeddings')">
+                    <span class="nav-icon">🧠</span><span class="nav-label">Embeddings</span>
+                </div>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar" id="sidebar-avatar">A</div>
+                    <div class="user-meta">
+                        <div class="u-name" id="sidebar-username">Admin</div>
+                        <div class="u-role">ADMIN</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- TOPBAR -->
+        <div class="topbar">
+            <span class="topbar-title" id="topbar-title">Dashboard</span>
+            <div class="topbar-actions">
+                <button class="btn btn-ghost btn-sm" onclick="window.location.href='/ui/user/dashboard'">User
+                    Dashboard</button>
+                <button class="btn btn-secondary btn-sm" onclick="logout()">🚪 Logout</button>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <main class="main-content">
+            <div class="page-content">
+
+                <!-- ── DASHBOARD SECTION ── -->
+                <div id="section-dashboard" class="section active">
+                    <div class="section-title">Dashboard</div>
+                    <div class="section-subtitle">Welcome back! Here's your system overview.</div>
+
+                    <!-- Row 1: Core Counts -->
+                    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Total Products</div>
+                                    <div class="stat-value" id="stat-products">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#EEF2FF;color:#4F46E5">📦</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Total Users</div>
+                                    <div class="stat-value" id="stat-users">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#D1FAE5;color:#059669">👥</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Scraping Runs</div>
+                                    <div class="stat-value" id="stat-runs">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#FEF3C7;color:#D97706">🔄</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Activity Logs</div>
+                                    <div class="stat-value" id="stat-logs">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#FEE2E2;color:#DC2626">📋</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Embedding Stats -->
+                    <div class="stats-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:16px">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Embedding Runs</div>
+                                    <div class="stat-value" id="stat-embedding-runs">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#E0F2FE;color:#0284C7">🧠</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Total Embeddings</div>
+                                    <div class="stat-value" id="stat-embeddings">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#DCFCE7;color:#16A34A">✅</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Activity Type Counts -->
+                    <div
+                        style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;margin-top:4px">
+                        Activity Log Breakdown</div>
+                    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Redirected</div>
+                                    <div class="stat-value" id="stat-act-redirected">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#FEF9C3;color:#854D0E">↩️</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Product Not Found</div>
+                                    <div class="stat-value" id="stat-act-notfound">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#FEE2E2;color:#B91C1C">🚫</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Field Missing</div>
+                                    <div class="stat-value" id="stat-act-fieldmissing">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#F3E8FF;color:#7E22CE">⚠️</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div>
+                                    <div class="stat-label">Already Exist</div>
+                                    <div class="stat-value" id="stat-act-alreadyexist">—</div>
+                                </div>
+                                <div class="stat-icon" style="background:#DCFCE7;color:#16A34A">✔️</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 4 removed: tool-wise stats are no longer tracked -->
+                </div>
+
+                <!-- ── PRODUCTS SECTION ── -->
+                <div id="section-products" class="section">
+                    <div class="section-title">Products</div>
+                    <div class="section-subtitle">Manage all scraped products and their details.</div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span style="font-weight:600;font-size:15px">All Products</span>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <input id="products-search-input" class="form-control" style="width:240px"
+                                    placeholder="Search by model/brand/series…"
+                                    onkeydown="if(event.key==='Enter')searchProducts()" />
+                                <button class="btn btn-secondary btn-sm" onclick="searchProducts()">Search</button>
+                                <button class="btn btn-ghost btn-sm" onclick="clearProductsSearch()">Clear</button>
+                                <button class="btn btn-primary btn-sm" onclick="openModal('create-product-modal')">+
+                                    Create Product</button>
+                            </div>
+                        </div>
+                        <div class="card-body" style="padding:0">
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Model Number</th>
+                                            <th>Name</th>
+                                            <th>Created</th>
+                                            <th>Listings</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="products-table-body">
+                                        <tr>
+                                            <td colspan="5"
+                                                style="text-align:center;padding:24px;color:var(--text-muted)">Loading…
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+                                <label for="products-page-size" style="font-size:13px;color:var(--text-muted)">Page
+                                    size:</label>
+                                <select id="products-page-size" class="form-control" style="width:70px">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <div style="flex:1"></div>
+                                <div id="products-pagination"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── USERS SECTION ── -->
+                <div id="section-users" class="section">
+                    <div class="section-title">Users</div>
+                    <div class="section-subtitle">Manage system users and their roles.</div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span style="font-weight:600;font-size:15px">All Users</span>
+                            <button class="btn btn-primary btn-sm" onclick="openModal('create-user-modal')">+ Create
+                                User</button>
+                        </div>
+                        <div class="card-body" style="padding:0">
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Role</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="users-table-body">
+                                        <tr>
+                                            <td colspan="4"
+                                                style="text-align:center;padding:24px;color:var(--text-muted)">Loading…
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+                                <label for="users-page-size" style="font-size:13px;color:var(--text-muted)">Page
+                                    size:</label>
+                                <select id="users-page-size" class="form-control" style="width:70px">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <div style="flex:1"></div>
+                                <div id="users-pagination"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── ACTIVITY LOGS SECTION ── -->
+                <div id="section-activity-logs" class="section">
+                    <div class="section-title">Activity Logs</div>
+                    <div class="section-subtitle">View and update scraping activity records.</div>
+                    <div class="card">
+                        <div class="card-header"><span style="font-weight:600;font-size:15px">Activity Logs</span></div>
+                        <div class="card-body" style="padding:0">
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Activity Type</th>
+                                            <th>URL</th>
+                                            <th>Retries</th>
+                                            <th>Review</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logs-table-body">
+                                        <tr>
+                                            <td colspan="7"
+                                                style="text-align:center;padding:24px;color:var(--text-muted)">Loading…
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+                                <label for="logs-page-size" style="font-size:13px;color:var(--text-muted)">Page
+                                    size:</label>
+                                <select id="logs-page-size" class="form-control" style="width:70px">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <div style="flex:1"></div>
+                                <div id="logs-pagination"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SCRAPER RUNS SECTION ── -->
+                <div id="section-scraper-runs" class="section">
+                    <div class="section-title">Scraper Runs</div>
+                    <div class="section-subtitle">Monitor all scraping runs and their outcomes.</div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span style="font-weight:600;font-size:15px">Scraper Runs</span>
+                            <button class="btn btn-primary btn-sm" onclick="triggerScraping()">▶ Run Scraping</button>
+                        </div>
+                        <div class="card-body" style="padding:0">
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Attempted</th>
+                                            <th>Valid</th>
+                                            <th>Invalid</th>
+                                            <th>Fallback</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="runs-table-body">
+                                        <tr>
+                                            <td colspan="6"
+                                                style="text-align:center;padding:24px;color:var(--text-muted)">Loading…
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+                                <label for="runs-page-size" style="font-size:13px;color:var(--text-muted)">Page
+                                    size:</label>
+                                <select id="runs-page-size" class="form-control" style="width:70px">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <div style="flex:1"></div>
+                                <div id="runs-pagination"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── EMBEDDINGS SECTION ── -->
+                <div id="section-embeddings" class="section">
+                    <div class="section-title">Embeddings</div>
+                    <div class="section-subtitle">Manage the AI embedding pipeline for semantic search.</div>
+                    <div class="card">
+                        <div class="card-body" style="text-align:center;padding:24px 18px">
+                            <div style="font-size:36px;margin-bottom:10px">🧠</div>
+                            <h3 style="font-size:15px;font-weight:700;margin-bottom:6px">Embedding Pipeline</h3>
+                            <p style="color:var(--text-muted);font-size:12px;line-height:1.5;margin-bottom:16px">
+                                Generates vector embeddings for normalized products.
+                                Enables semantic search in the chatbot.
+                            </p>
+                            <button class="btn btn-primary" onclick="triggerEmbedding()" id="embed-btn">
+                                ▶ Run Embedding Pipeline
+                            </button>
+                            <div id="embed-result" style="margin-top:14px;display:none">
+                                <div
+                                    style="background:var(--accent-light);border:1px solid var(--accent);border-radius:10px;padding:10px;text-align:left">
+                                    <div style="font-weight:600;color:var(--accent);margin-bottom:4px">✅ Pipeline
+                                        Triggered</div>
+                                    <div style="font-size:12px;color:var(--text-muted)">Status: <code id="embed-task-id"
+                                            style="font-family:monospace;color:var(--text)"></code>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-top:20px">
+                        <div class="card-header">
+                            <span style="font-weight:600;font-size:15px">Embedding Metadata Runs</span>
+                        </div>
+                        <div class="card-body" style="padding:0">
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Model</th>
+                                            <th>Status</th>
+                                            <th>Total</th>
+                                            <th>Success</th>
+                                            <th>Failed</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="embedding-metadata-table-body">
+                                        <tr>
+                                            <td colspan="7"
+                                                style="text-align:center;padding:24px;color:var(--text-muted)">Loading…
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:10px;padding:12px 16px">
+                                <label for="embedding-metadata-page-size"
+                                    style="font-size:13px;color:var(--text-muted)">Page size:</label>
+                                <select id="embedding-metadata-page-size" class="form-control" style="width:70px"
+                                    onchange="embeddingMetadataPageSize=parseInt(this.value);loadEmbeddingMetadata(1)">
+                                    <option value="5">5</option>
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                                <div style="flex:1"></div>
+                                <div id="embedding-metadata-pagination"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        //  SHARED UTILS
+        const API = '/api/v1';
+        let token = localStorage.getItem('access_token');
+        const role = localStorage.getItem('role');
+
+        if (!token || role !== 'ADMIN') { window.location.href = '/ui/login'; }
+
+        document.getElementById('sidebar-username').textContent = localStorage.getItem('username') || 'Admin';
+        document.getElementById('sidebar-avatar').textContent = (localStorage.getItem('username') || 'A')[0].toUpperCase();
+
+        function authHeaders(extra = {}) {
+            return { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', ...extra };
+        }
+
+        async function apiFetch(path, opts = {}) {
+            const res = await fetch(API + path, { headers: authHeaders(), ...opts });
+            if (res.status === 401) { localStorage.clear(); window.location.href = '/ui/login'; return null; }
+            return res;
+        }
+
+        function showToast(msg, type = 'info') {
+            const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${msg}</span>`;
+            el.onclick = () => removeToast(el);
+            document.getElementById('toast-container').appendChild(el);
+            setTimeout(() => removeToast(el), 4000);
+        }
+        function removeToast(el) { el.classList.add('out'); setTimeout(() => el.remove(), 220); }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        document.querySelectorAll('.modal-overlay').forEach(el => {
+            el.addEventListener('click', e => { if (e.target === el) el.classList.add('hidden'); });
+        });
+
+        function fmtDate(d) { return d ? new Date(d).toLocaleString() : '—'; }
+        function truncate(s, n = 40) { return s && s.length > n ? s.slice(0, n) + '…' : (s || '—'); }
+        function normalizeProductName(brand, series) {
+            const b = (brand || '').trim();
+            const s = (series || '').trim();
+            if (!b && !s) return '—';
+            if (!b) return s;
+            if (!s) return b;
+            let cleanSeries = s;
+            if (s.toLowerCase().startsWith(b.toLowerCase())) {
+                cleanSeries = s.slice(b.length).trim();
+            }
+            return [b, cleanSeries].filter(Boolean).join(' ');
+        }
+        function normalizeProcessor(processor) {
+            const p = (processor || '').trim();
+            if (!p) return '—';
+            const parts = p.split(/\s+/);
+            if (parts.length >= 2 && parts[0].toLowerCase() === parts[1].toLowerCase()) {
+                return [parts[0], ...parts.slice(2)].join(' ').trim();
+            }
+            return p;
+        }
+
+        function makePagination(container, total, page, size, cb) {
+            const pages = Math.ceil(total / size) || 1;
+            const el = document.getElementById(container);
+            if (!el) return;
+            if (total === 0) { el.innerHTML = ''; return; }
+            let html = `<div class="pagination"><span class="page-info">${total} items · page ${page}/${pages}</span>`;
+            html += `<button onclick="(${cb})(1)" ${page <= 1 ? 'disabled' : ''}>«</button>`;
+            html += `<button onclick="(${cb})(${page - 1})" ${page <= 1 ? 'disabled' : ''}>‹</button>`;
+            for (let p = Math.max(1, page - 2); p <= Math.min(pages, page + 2); p++)
+                html += `<button class="${p === page ? 'active' : ''}" onclick="(${cb})(${p})">${p}</button>`;
+            html += `<button onclick="(${cb})(${page + 1})" ${page >= pages ? 'disabled' : ''}>›</button>`;
+            html += `<button onclick="(${cb})(${pages})" ${page >= pages ? 'disabled' : ''}>»</button>`;
+            html += '</div>';
+            el.innerHTML = html;
+        }
+
+        function confirmAction(title, msg, okLabel, okClass, cb) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-msg').textContent = msg;
+            const btn = document.getElementById('confirm-ok-btn');
+            btn.textContent = okLabel;
+            btn.className = `btn ${okClass}`;
+            btn.onclick = () => { closeModal('confirm-modal'); cb(); };
+            openModal('confirm-modal');
+        }
+
+        //  NAVIGATION
+        const sectionTitles = {
+            'dashboard': 'Dashboard', 'products': 'Products', 'users': 'Users',
+            'activity-logs': 'Activity Logs',
+            'scraper-runs': 'Scraper Runs', 'embeddings': 'Embeddings'
+        };
+        let currentSection = 'dashboard';
+
+        function showSection(name) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`section-${name}`).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => {
+                if (n.getAttribute('onclick')?.includes(`'${name}'`)) n.classList.add('active');
+            });
+            document.getElementById('topbar-title').textContent = sectionTitles[name] || name;
+            currentSection = name;
+            const loaders = {
+                'products': () => loadProducts(1),
+                'users': () => loadUsers(1),
+                'activity-logs': () => loadActivityLogs(1),
+                'scraper-runs': () => loadScraperRuns(1),
+            };
+            if (loaders[name]) loaders[name]();
+        }
+
+        //  DASHBOARD STATS
+        async function loadStats() {
+            // Fetch all dashboard stats from the new single API endpoint
+            const res = await apiFetch('/admin/stats');
+            if (!res?.ok) {
+                // fallback: set all stat cards to '—'
+                [
+                    'stat-products', 'stat-users', 'stat-runs', 'stat-logs', 'stat-embedding-runs',
+                    'stat-embeddings',
+                    'stat-act-redirected', 'stat-act-notfound', 'stat-act-fieldmissing', 'stat-act-alreadyexist'
+                ].forEach(id => { document.getElementById(id).textContent = '—'; });
+                return;
+            }
+            const resp = await res.json();
+            const d = resp.data || {};
+            console.log('Dashboard stats:', d);
+            document.getElementById('stat-products').textContent = d.total_products ?? '—';
+            document.getElementById('stat-users').textContent = d.total_users ?? '—';
+            document.getElementById('stat-runs').textContent = d.total_scraper_runs ?? '—';
+            document.getElementById('stat-logs').textContent = d.total_activity_logs ?? '—';
+            document.getElementById('stat-embedding-runs').textContent = d.total_embedding_runs ?? '—';
+            document.getElementById('stat-embeddings').textContent = d.total_embeddings ?? '—';
+            document.getElementById('stat-act-redirected').textContent = d.activity_types?.REDIRECTED ?? '—';
+            document.getElementById('stat-act-notfound').textContent = d.activity_types?.PRODUCT_NOT_FOUND ?? '—';
+            document.getElementById('stat-act-fieldmissing').textContent = d.activity_types?.FIELD_MISSING ?? '—';
+            document.getElementById('stat-act-alreadyexist').textContent = d.activity_types?.ALREADY_EXIST ?? '—';
+        }
+
+        //  PRODUCTS
+        let productsPage = 1;
+        let productsPageSize = 10;
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('products-page-size').addEventListener('change', function () {
+                productsPageSize = parseInt(this.value);
+                loadProducts(1);
+            });
+        });
+        let productsSearchTerm = '';
+
+        function searchProducts() {
+            productsSearchTerm = document.getElementById('products-search-input').value.trim();
+            loadProducts(1);
+        }
+
+        function clearProductsSearch() {
+            productsSearchTerm = '';
+            document.getElementById('products-search-input').value = '';
+            loadProducts(1);
+        }
+
+        async function loadProducts(page = 1) {
+            productsPage = page;
+            const searchParam = productsSearchTerm ? `&search=${encodeURIComponent(productsSearchTerm)}` : '';
+            const res = await apiFetch(`/admin/products/?page=${page}&size=${productsPageSize}${searchParam}`);
+            if (!res?.ok) return;
+            const data = await res.json();
+            const tbody = document.getElementById('products-table-body');
+            if (!data.data?.length) {
+                tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📦</div><p>No products found</p></div></td></tr>';
+                document.getElementById('products-pagination').innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = data.data.map(p => {
+                const listingCount = p.product_details?.length || 0;
+                const brandSeries = normalizeProductName(p.brand, p.series);
+                return `<tr>
+            <td style="padding-left:14px; padding-right:14px"><strong>${truncate(p.model_number, 32)}</strong></td>
+            <td style="padding-left:14px; padding-right:14px">${truncate(brandSeries, 40)}</td>
+            <td style="padding-left:14px; padding-right:14px">${fmtDate(p.created_at)}</td>
+            <td style="padding-left:14px; padding-right:14px"><span class="badge badge-blue">${listingCount} listings</span></td>
+            <td class="actions" style="padding-left:14px; padding-right:14px">
+                <button class="btn btn-secondary btn-sm" onclick="viewProductDetail('${p.id}')">View</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">Delete</button>
+            </td>
+        </tr>`;
+            }).join('');
+            makePagination('products-pagination', data.total, page, productsPageSize, 'loadProducts');
+        }
+
+        async function viewProductDetail(id) {
+            const res = await apiFetch(`/admin/products/${id}`);
+            if (!res?.ok) { showToast('Failed to load product', 'error'); return; }
+            const json = await res.json();
+            const p = json.data;
+            const brandSeries = normalizeProductName(p.brand, p.series);
+            let html = `<table class="detail-table">
+        <tr><td>ID</td><td><code>${p.id}</code></td></tr>
+        <tr><td>Model Number</td><td><strong>${p.model_number}</strong></td></tr>
+        <tr><td>Name</td><td>${brandSeries}</td></tr>
+        <tr><td>Processor</td><td>${normalizeProcessor(p.processor)}</td></tr>
+        <tr><td>RAM</td><td>${p.ram || '—'}</td></tr>
+        <tr><td>Storage</td><td>${p.storage || '—'}</td></tr>
+        <tr><td>Screen Size</td><td>${p.screen_size || '—'}</td></tr>
+        <tr><td>Graphics</td><td>${p.graphic_processor || '—'}</td></tr>
+        <tr><td>Colour</td><td>${p.colour || '—'}</td></tr>
+        <tr><td>Created</td><td>${fmtDate(p.created_at)}</td></tr>
+    </table>
+    <h4 style="margin:16px 0 10px;font-size:14px">Listings by Source</h4>`;
+
+            if (!p.product_details?.length) {
+                html += '<p style="color:var(--text-muted);font-size:13px">No listings yet.</p>';
+            } else {
+                p.product_details.forEach(d => {
+                    html += `<div style="border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap">
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <span class="badge badge-purple">${d.source}</span>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button class="btn btn-secondary btn-sm" onclick="openUpdateDetail('${p.id}','${d.source}',${JSON.stringify(d).replace(/"/g, '&quot;')})">Edit</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteProductDetail('${p.id}','${d.source}')">Delete</button>
+                    </div>
+                </div>
+                <table class="detail-table">
+                    <tr><td>Price</td><td>${d.price != null ? '₹' + d.price.toLocaleString() : '—'}</td></tr>
+                    <tr><td>Rating</td><td>${d.rating != null ? '⭐ ' + d.rating + '/5' : '—'}</td></tr>
+                    <tr><td>Reviews</td><td>${d.review_count ?? '—'}</td></tr>
+                    <tr><td>Discount</td><td>${d.discount != null ? d.discount + '%' : '—'}</td></tr>
+                    <tr><td>URL</td><td><a href="${d.url}" target="_blank" style="color:var(--accent)">${truncate(d.url, 50)}</a></td></tr>
+                    <tr><td>Scraped At</td><td>${fmtDate(d.scraped_at)}</td></tr>
+                    ${d.image_url ? `<tr><td>Image</td><td><img src="${d.image_url}" style="max-height:80px;border-radius:6px"/></td></tr>` : ''}
+                </table>
+            </div>`;
+                });
+            }
+
+            document.getElementById('pd-modal-title').textContent = `Product: ${brandSeries || p.model_number}`;
+            document.getElementById('pd-modal-body').innerHTML = html;
+            openModal('product-detail-modal');
+        }
+
+        function openUpdateDetail(productId, source, d) {
+            document.getElementById('upd-product-id').value = productId;
+            document.getElementById('upd-source').value = source;
+            document.getElementById('upd-price').value = d.price ?? '';
+            document.getElementById('upd-discount').value = d.discount ?? '';
+            document.getElementById('upd-rating').value = d.rating ?? '';
+            document.getElementById('upd-reviews').value = d.review_count ?? '';
+            document.getElementById('upd-url').value = d.url || '';
+            document.getElementById('upd-image').value = d.image_url || '';
+            closeModal('product-detail-modal');
+            openModal('update-detail-modal');
+        }
+
+        async function submitUpdateDetail() {
+            const pid = document.getElementById('upd-product-id').value;
+            const source = document.getElementById('upd-source').value;
+            const body = {
+                price: parseFloat(document.getElementById('upd-price').value) || null,
+                discount: parseInt(document.getElementById('upd-discount').value) || null,
+                rating: parseFloat(document.getElementById('upd-rating').value) || null,
+                review_count: parseInt(document.getElementById('upd-reviews').value) || null,
+                url: document.getElementById('upd-url').value || null,
+                image_url: document.getElementById('upd-image').value || null,
+            };
+            const res = await apiFetch(`/admin/products/${pid}/${source}`, { method: 'PUT', body: JSON.stringify(body) });
+            if (res?.ok) { showToast('Product detail updated!', 'success'); closeModal('update-detail-modal'); loadProducts(productsPage); }
+            else { const e = await res?.json(); showToast(e?.error?.message || 'Update failed', 'error'); }
+        }
+
+        async function deleteProduct(id) {
+            confirmAction('Delete Product', 'This will permanently delete the product and all its details.', 'Delete', 'btn-danger', async () => {
+                const res = await apiFetch(`/admin/products/${id}`, { method: 'DELETE' });
+                if (res?.ok) { showToast('Product deleted', 'success'); loadProducts(productsPage); }
+                else { const e = await res?.json(); showToast(e?.error?.message || 'Delete failed', 'error'); }
+            });
+        }
+
+        async function deleteProductDetail(pid, source) {
+            confirmAction('Delete Listing', `Delete listing for source "${source}"?`, 'Delete', 'btn-danger', async () => {
+                const res = await apiFetch(`/admin/products/${pid}/${source}`, { method: 'DELETE' });
+                if (res?.ok) { showToast('Detail deleted', 'success'); closeModal('product-detail-modal'); loadProducts(productsPage); }
+                else { const e = await res?.json(); showToast(e?.error?.message || 'Delete failed', 'error'); }
+            });
+        }
+
+        async function submitCreateProduct() {
+            const body = {
+                model_number: document.getElementById('cp-model').value,
+                brand: document.getElementById('cp-brand').value || null,
+                series: document.getElementById('cp-series').value || null,
+                processor: document.getElementById('cp-processor').value || null,
+                ram: document.getElementById('cp-ram').value || null,
+                storage: document.getElementById('cp-storage').value || null,
+                screen_size: document.getElementById('cp-screen').value || null,
+                graphic_processor: document.getElementById('cp-graphics').value || null,
+                colour: document.getElementById('cp-colour').value || null,
+                source: document.getElementById('cp-source').value,
+                url: document.getElementById('cp-url').value,
+                image_url: document.getElementById('cp-image').value || null,
+                price: parseFloat(document.getElementById('cp-price').value) || null,
+                discount: parseInt(document.getElementById('cp-discount').value) || null,
+                rating: parseFloat(document.getElementById('cp-rating').value) || null,
+                review_count: parseInt(document.getElementById('cp-reviews').value) || null,
+            };
+            const res = await apiFetch('/admin/products/', { method: 'POST', body: JSON.stringify(body) });
+            if (res?.ok) { showToast('Product created!', 'success'); closeModal('create-product-modal'); loadProducts(1); }
+            else { const e = await res?.json(); showToast(e?.error?.message || e?.detail || 'Create failed', 'error'); }
+        }
+
+
+        //  USERS
+        let usersPage = 1;
+        let usersPageSize = 10;
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('users-page-size').addEventListener('change', function () {
+                usersPageSize = parseInt(this.value);
+                loadUsers(1);
+            });
+        });
+        async function loadUsers(page = 1) {
+            usersPage = page;
+            const res = await apiFetch(`/users/?page=${page}&size=${usersPageSize}`);
+            if (!res?.ok) return;
+            const data = await res.json();
+            const tbody = document.getElementById('users-table-body');
+            if (!data.data?.length) {
+                tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">👥</div><p>No users found</p></div></td></tr>';
+                document.getElementById('users-pagination').innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = data.data.map(u => `
+    <tr>
+      <td style="padding-left:14px; padding-right:14px"><strong>${u.username}</strong></td>
+      <td style="padding-left:14px; padding-right:14px"><span class="badge ${u.role === 'ADMIN' ? 'badge-purple' : 'badge-blue'}">${u.role}</span></td>
+      <td style="padding-left:14px; padding-right:14px">${fmtDate(u.created_at)}</td>
+      <td class="actions" style="padding-left:14px; padding-right:14px">
+        <button class="btn btn-secondary btn-sm" onclick="openEditUser('${u.id}','${u.username}','${u.role}')">Edit</button>
+        <button class="btn btn-warning btn-sm" onclick="openChangePwd('${u.id}')">Change Password</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}','${u.username}')">Delete</button>
+      </td>
+    </tr>`).join('');
+            makePagination('users-pagination', data.total, page, usersPageSize, 'loadUsers');
+        }
+
+        function openEditUser(id, username, role) {
+            document.getElementById('eu-id').value = id;
+            document.getElementById('eu-username').value = username;
+            document.getElementById('eu-role').value = role;
+            openModal('edit-user-modal');
+        }
+        async function submitEditUser() {
+            const id = document.getElementById('eu-id').value;
+            const body = { username: document.getElementById('eu-username').value, role: document.getElementById('eu-role').value };
+            const res = await apiFetch(`/users/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+            if (res?.ok) { showToast('User updated!', 'success'); closeModal('edit-user-modal'); loadUsers(usersPage); }
+            else { const e = await res?.json(); showToast(e?.error?.message || 'Update failed', 'error'); }
+        }
+
+        function openChangePwd(id) { document.getElementById('cpwd-id').value = id; document.getElementById('cpwd-new').value = ''; openModal('change-pwd-modal'); }
+        async function submitChangePassword() {
+            const id = document.getElementById('cpwd-id').value;
+            const pwd = document.getElementById('cpwd-new').value;
+            if (!pwd || pwd.length < 6) { showToast('Password must be at least 6 characters', 'error'); return; }
+            const res = await apiFetch(`/users/change-password/${id}`, { method: 'POST', body: JSON.stringify({ new_password: pwd }) });
+            if (res?.ok) { showToast('Password changed!', 'success'); closeModal('change-pwd-modal'); }
+            else { const e = await res?.json(); showToast(e?.error?.message || 'Failed', 'error'); }
+        }
+
+        async function submitCreateUser() {
+            const body = { username: document.getElementById('cu-username').value, password: document.getElementById('cu-password').value, role: document.getElementById('cu-role').value };
+            const res = await apiFetch('/users/', { method: 'POST', body: JSON.stringify(body) });
+            if (res?.ok) { showToast('User created!', 'success'); closeModal('create-user-modal'); loadUsers(1); }
+            else { const e = await res?.json(); showToast(e?.error?.message || e?.detail || 'Create failed', 'error'); }
+        }
+
+        async function deleteUser(id, username) {
+            confirmAction('Delete User', `Delete user "${username}"? This cannot be undone.`, 'Delete', 'btn-danger', async () => {
+                const res = await apiFetch(`/users/${id}`, { method: 'DELETE' });
+                if (res?.ok) { showToast('User deleted', 'success'); loadUsers(usersPage); }
+                else { const e = await res?.json(); showToast(e?.error?.message || 'Delete failed', 'error'); }
+            });
+        }
+
+        //  ACTIVITY LOGS
+        let logsPage = 1;
+        let logsPageSize = 10;
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('logs-page-size').addEventListener('change', function () {
+                logsPageSize = parseInt(this.value);
+                loadActivityLogs(1);
+            });
+        });
+        async function loadActivityLogs(page = 1) {
+            logsPage = page;
+            const res = await apiFetch(`/admin/activity-logs/?page=${page}&size=${logsPageSize}`);
+            if (!res?.ok) return;
+            const data = await res.json();
+            const tbody = document.getElementById('logs-table-body');
+            if (!data.data?.length) {
+                tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📋</div><p>No logs found</p></div></td></tr>';
+                document.getElementById('logs-pagination').innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = data.data.map(l => {
+
+                const reviewBadge = l.human_review_flag
+                    ? '<span class="badge badge-yellow">Yes</span>'
+                    : '<span class="badge badge-gray">No</span>';
+                return `
+        <tr>
+            <td style="padding-left:14px; padding-right:14px">${l.activity_type}</td>
+            <td title="${l.product_url}" style="padding-left:14px; padding-right:14px">${truncate(l.product_url, 35)}</td>
+            <td style="padding-left:14px; padding-right:14px">${l.retry_count ?? 0}</td>
+            <td style="padding-left:14px; padding-right:14px">${reviewBadge}</td>
+            <td style="padding-left:14px; padding-right:14px">${fmtDate(l.created_at)}</td>
+            <td class="actions" style="padding-left:14px; padding-right:14px">
+                <button class="btn btn-secondary btn-sm" onclick="viewLog('${l.id}')">View</button>
+                <button class="btn btn-ghost btn-sm" onclick="openUpdateLog('${l.id}',${l.retry_count || 0},${l.human_review_flag || false})">Edit</button>
+            </td>
+        </tr>`;
+            }).join('');
+            makePagination('logs-pagination', data.total, page, logsPageSize, 'loadActivityLogs');
+        }
+
+        async function viewLog(id) {
+            const res = await apiFetch(`/admin/activity-logs/${id}`);
+            if (!res?.ok) return;
+            const json = await res.json(); const l = json.data;
+            let productDataHtml = '';
+            if (l.product_data && typeof l.product_data === 'object') {
+                productDataHtml = `<tr><td>Product Data</td><td><table class="detail-table" style="margin:0;background:none;border:none">` +
+                    Object.entries(l.product_data).map(([k, v]) => `<tr><td style='font-weight:500'>${k}</td><td>${typeof v === 'object' && v !== null ? JSON.stringify(v) : v}</td></tr>`).join('') +
+                    `</table></td></tr>`;
+            }
+            document.getElementById('log-detail-body').innerHTML = `
+        <table class="detail-table">
+            <tr><td>ID</td><td><code>${l.id}</code></td></tr>
+            <tr><td>Activity Type</td><td>${l.activity_type}</td></tr>
+            <tr><td>URL</td><td><a href="${l.product_url}" target="_blank" style="color:var(--accent)">${l.product_url}</a></td></tr>
+            <tr><td>Retry Count</td><td>${l.retry_count}</td></tr>
+            <tr><td>Human Review</td><td>${l.human_review_flag ? 'Yes' : 'No'}</td></tr>
+            <tr><td>Run ID</td><td>${l.run_id || '—'}</td></tr>
+            <tr><td>Created</td><td>${fmtDate(l.created_at)}</td></tr>
+            ${productDataHtml}
+        </table>`;
+            openModal('log-detail-modal');
+        }
+
+        function openUpdateLog(id, retry, review) {
+            document.getElementById('ul-id').value = id;
+            document.getElementById('ul-retry').value = retry;
+            document.getElementById('ul-review').checked = review;
+            openModal('update-log-modal');
+        }
+        async function submitUpdateLog() {
+            const id = document.getElementById('ul-id').value;
+            const body = { retry_count: parseInt(document.getElementById('ul-retry').value), human_review_flag: document.getElementById('ul-review').checked };
+            const res = await apiFetch(`/admin/activity-logs/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+            if (res?.ok) { showToast('Log updated!', 'success'); closeModal('update-log-modal'); loadActivityLogs(logsPage); }
+            else { const e = await res?.json(); showToast(e?.error?.message || 'Failed', 'error'); }
+        }
+
+
+        //  SCRAPER RUNS
+
+        let runsPage = 1;
+        let runsPageSize = 10;
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('runs-page-size').addEventListener('change', function () {
+                runsPageSize = parseInt(this.value);
+                loadScraperRuns(1);
+            });
+        });
+        async function loadScraperRuns(page = 1) {
+            runsPage = page;
+            const url = `/admin/scraper-runs/?page=${page}&size=${runsPageSize}`;
+            const res = await apiFetch(url);
+            if (!res?.ok) return;
+            const data = await res.json();
+            const tbody = document.getElementById('runs-table-body');
+            if (!data.data?.length) {
+                tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🔄</div><p>No scraper runs found</p></div></td></tr>';
+                document.getElementById('runs-pagination').innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = data.data.map(r => {
+                const status = r.end_time ? '<span class="badge badge-green">Completed</span>' : '<span class="badge badge-red">Failed</span>';
+                return `
+        <tr>
+            <td style="padding-left:14px; padding-right:14px">${r.total_products_attempted ?? 0}</td>
+            <td style="padding-left:14px; padding-right:14px"><span class="badge badge-green">${r.valid_products ?? 0}</span></td>
+            <td style="padding-left:14px; padding-right:14px"><span class="badge badge-red">${r.invalid_products ?? 0}</span></td>
+            <td style="padding-left:14px; padding-right:14px"><span class="badge ${r.is_fallback_run ? 'badge-yellow' : 'badge-gray'}">${r.is_fallback_run ? 'Yes' : 'No'}</span></td>
+            <td style="padding-left:14px; padding-right:14px">${fmtDate(r.start_time)}</td>
+            <td style="padding-left:14px; padding-right:14px">${r.end_time ? fmtDate(r.end_time) : '<span class="badge badge-yellow">None</span>'}</td>
+            <td style="padding-left:14px; padding-right:14px">${status}</td>
+        </tr>`;
+            }).join('');
+            makePagination('runs-pagination', data.total, page, runsPageSize, 'loadScraperRuns');
+        }
+
+
+        //  EMBEDDINGS
+
+        let embeddingMetadataPage = 1;
+        let embeddingMetadataPageSize = 10;
+
+        async function loadEmbeddingMetadata(page = 1) {
+            embeddingMetadataPage = page;
+            const tbody = document.getElementById('embedding-metadata-table-body');
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Loading…</td></tr>`;
+            const res = await apiFetch(`/admin/embeddings/metadata?page=${page}&size=${embeddingMetadataPageSize}`);
+            if (!res?.ok) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">Failed to load data</td></tr>`;
+                return;
+            }
+            const json = await res.json();
+            if (!json.data?.length) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted)">No runs yet</td></tr>`;
+                document.getElementById('embedding-metadata-pagination').innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = json.data.map(row => `<tr>
+                <td style="word-break:break-all;white-space:normal; padding-left:14px; padding-right:14px">${row.model_name}</td>
+                <td style="padding-left:14px; padding-right:14px">${row.status}</td>
+                <td style="padding-left:14px; padding-right:14px">${row.total_attempted}</td>
+                <td style="padding-left:14px; padding-right:14px">${row.success_count}</td>
+                <td style="padding-left:14px; padding-right:14px">${row.failed_count}</td>
+                <td style="padding-left:14px; padding-right:14px">${fmtDate(row.start_time)}</td>
+                <td style="padding-left:14px; padding-right:14px">${row.end_time ? fmtDate(row.end_time) : '—'}</td>
+            </tr>`).join('');
+            makePagination('embedding-metadata-pagination', json.total, page, embeddingMetadataPageSize, 'loadEmbeddingMetadata');
+        }
+
+        async function triggerEmbedding() {
+            const btn = document.getElementById('embed-btn');
+            btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Starting…';
+            const res = await apiFetch('/admin/embeddings/run', { method: 'POST' });
+            btn.disabled = false; btn.innerHTML = '▶ Run Embedding Pipeline';
+            if (res?.ok) {
+                const json = await res.json();
+                document.getElementById('embed-task-id').textContent = json.data?.status || 'queued';
+                document.getElementById('embed-result').style.display = 'block';
+                showToast('Embedding pipeline triggered!', 'success');
+                await loadEmbeddingMetadata(1);
+            } else {
+                const e = await res?.json();
+                showToast(e?.error?.message || 'Failed to trigger pipeline', 'error');
+            }
+        }
+
+        async function triggerScraping() {
+            const res = await apiFetch('/admin/scraper-runs/run', { method: 'POST' });
+            if (res?.ok) {
+                showToast('Scraping trigger accepted!', 'success');
+                await loadScraperRuns(1);
+            } else {
+                const e = await res?.json();
+                showToast(e?.error?.message || 'Failed to trigger scraping', 'error');
+            }
+        }
+
+
+        //  LOGOUT
+        async function logout() {
+            try { await apiFetch('/auth/logout', { method: 'POST' }); } catch { }
+            localStorage.clear(); window.location.href = '/ui/login';
+        }
+
+
+        //  INIT
+        loadStats();
+        loadEmbeddingMetadata(1);
+    </script>
+</body>
+
+</html>
