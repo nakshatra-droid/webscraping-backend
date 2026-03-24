@@ -11,12 +11,19 @@ from app.database.database import get_db
 from app.exceptions import ExceptionHandlers
 from app.middleware.auth_asgi import AuthASGIMiddleware
 from app.schemas.common_schemas import MessageResponse
+from contextlib import asynccontextmanager
+from app.utils.embedding_utils import EmbeddingUtils
 
-
+# Preload embedding model at app startup
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    EmbeddingUtils.preload_model()
+    yield
 app = FastAPI(
     title="Web Scraping Data API Service",
     description="API for managing and accessing web scraping data efficiently.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Setup global exception handlers

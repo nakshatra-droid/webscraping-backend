@@ -14,6 +14,10 @@ WORKDIR /app
 
 RUN pip install --upgrade pip setuptools wheel
 
+RUN pip install --no-cache-dir \
+    torch==2.2.2+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+    
 COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 

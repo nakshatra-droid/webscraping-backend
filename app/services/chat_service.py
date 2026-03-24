@@ -1,7 +1,5 @@
 import traceback
 from uuid import UUID
-
-import ollama
 from fastapi import WebSocket, WebSocketDisconnect
 
 from app.constants.constants import ChatConstants
@@ -9,7 +7,7 @@ from app.data_controllers.chat_data_controller import ChatDataController
 from app.data_controllers.chat_history_data_controller import ChatHistoryDataController
 from app.database.database import AsyncSessionLocal
 from app.models.chat_message import ChatSenderEnum
-from app.utils.chat_router_utils import generate_sql, is_safe_sql, route_query
+from app.utils.embedding_utils import EmbeddingUtils
 
 
 class ChatService:
@@ -17,6 +15,7 @@ class ChatService:
         self, websocket: WebSocket, user_id: UUID, session_id: UUID
     ):
         await websocket.accept()
+        EmbeddingUtils.get_embedding_model()
         try:
             while True:
                 query = await websocket.receive_text()
@@ -40,27 +39,19 @@ class ChatService:
     async def search_products(
         self, query: str, top_k: int = ChatConstants.TOP_K_RESULTS
     ) -> list[dict]:
-        route = route_query(query)
-        print(f"Routing query to: {route}")
+        
+        filters={}
+        model = EmbeddingUtils.get_embedding_model()
+
+        encode_text = query 
+
+        query_vector = model.encode(encode_text).tolist()
 
         async with AsyncSessionLocal() as db:
             controller = ChatDataController(db)
-
-            if route == "STRUCTURED":
-                try:
-                    sql = generate_sql(query)
-                    print("Generated SQL:", sql)
-                    if is_safe_sql(sql):
-                        return await controller.run_structured_sql(sql)
-                except Exception:
-                    traceback.print_exc()
-
-           
-            response = ollama.embed(model="llama3.2", input=query)
-            query_vector = response["embeddings"][0]
             return await controller.search_products(
                 query_vector=query_vector,
-                filters={},
+                filters=filters,
                 top_k=top_k,
             )
 
