@@ -39,11 +39,11 @@ class ChatService:
     async def search_products(
         self, query: str, top_k: int = ChatConstants.TOP_K_RESULTS
     ) -> list[dict]:
-        
-        filters={}
+
+        filters = {}
         model = EmbeddingUtils.get_embedding_model()
 
-        encode_text = query 
+        encode_text = query
 
         query_vector = model.encode(encode_text).tolist()
 
@@ -65,7 +65,7 @@ class ChatService:
             )
 
     async def _save_bot_products(self, session_id: UUID, products: list[dict]) -> None:
-       
+
         async with AsyncSessionLocal() as db:
             controller = ChatHistoryDataController(db)
             await controller.create_message(

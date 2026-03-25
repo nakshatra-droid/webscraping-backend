@@ -493,6 +493,18 @@
         let wsConnected = false;
         let currentSessionId = null;
         let chatSessionsLoaded = false;
+        const sessionFirstQuestionMap = {};
+
+        function getSessionDisplayTitle(session) {
+            const mappedTitle = sessionFirstQuestionMap[session.id];
+            if (mappedTitle) return mappedTitle;
+
+            const rawTitle = (session.title || '').trim();
+            if (!rawTitle || rawTitle.toLowerCase() === 'new chat') {
+                return `Chat ${new Date(session.created_at).toLocaleString()}`;
+            }
+            return rawTitle;
+        }
 
         async function ensureChatReady() {
             if (!chatSessionsLoaded) {
@@ -529,7 +541,7 @@
             }
             el.innerHTML = sessions.map(s => {
                 const active = s.id === currentSessionId;
-                const title = s.title || `Chat ${new Date(s.created_at).toLocaleString()}`;
+                const title = getSessionDisplayTitle(s);
                 return `<button onclick="selectChatSession('${s.id}')" style="width:100%;text-align:left;border:1px solid ${active ? 'var(--accent)' : 'var(--border)'};background:${active ? 'var(--accent-light)' : 'var(--surface)'};border-radius:8px;padding:8px 10px;margin-bottom:6px;cursor:pointer;font-size:12px;color:var(--text)">${escapeHtml(title)}</button>`;
             }).join('');
         }
@@ -571,6 +583,18 @@
                 clearChat();
                 return;
             }
+
+            // If backend title is still "New Chat", derive UI title from first user message.
+            if (!sessionFirstQuestionMap[sessionId]) {
+                const firstUserMsg = messages.find(
+                    m => m.sender === 'USER' && (m.message && m.message.text)
+                );
+                if (firstUserMsg?.message?.text) {
+                    sessionFirstQuestionMap[sessionId] = firstUserMsg.message.text.trim();
+                    await loadChatSessions();
+                }
+            }
+
             messages.forEach(m => {
                 if (m.sender === 'USER') {
                     appendUserMsg((m.message && m.message.text) || '');
@@ -660,6 +684,13 @@
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
             if (!text || !wsConnected || !currentSessionId) return;
+
+            // Update sidebar title to first asked question for this session (frontend only).
+            if (!sessionFirstQuestionMap[currentSessionId]) {
+                sessionFirstQuestionMap[currentSessionId] = text;
+                loadChatSessions();
+            }
+
             appendUserMsg(text);
             appendTyping();
             ws.send(text);
