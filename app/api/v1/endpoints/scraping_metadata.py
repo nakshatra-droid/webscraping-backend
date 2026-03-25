@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, Query
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.database import get_db
 from app.schemas.scraping_metadata_schemas import ScrapingMetadataResponse
 from app.services.scraping_metadata_service import ScrapingMetadataService
+from app.services.airflow_service import AirflowService
 from app.middleware.auth import AuthMiddleware
 from app.models.users import Users
 from app.constants.constants import PaginationConstants
 from app.schemas.common_schemas import MessageResponse, PaginatedResponse
+from app.schemas.airflow_schemas import ScrapingDagTriggerRequest
 
 router = APIRouter()
 
@@ -48,7 +51,7 @@ async def get_all_scraping_runs(
     path="/run",
     response_model=MessageResponse,
     summary="Trigger Scraping Run (Admin)",
-    description="Dummy endpoint to trigger the Airflow scraping DAG in the future.",
+    description="Trigger the configured Airflow scraping DAG.",
     responses={
         200: {"description": "Scraping trigger accepted"},
         401: {"description": "Unauthorized"},
@@ -56,10 +59,17 @@ async def get_all_scraping_runs(
     },
 )
 async def trigger_scraping_run(
+    payload: Optional[ScrapingDagTriggerRequest] = None,
     current_user: Users = Depends(AuthMiddleware.get_current_admin),
 ) -> MessageResponse:
-    """Placeholder to trigger Airflow scraping DAG."""
+    """Trigger Airflow scraping DAG with source and optional conf overrides."""
 
-    return MessageResponse(
-        message="Scraping trigger accepted", data={"status": "queued"}
+    service = AirflowService()
+    payload = payload or ScrapingDagTriggerRequest()
+    data = await service.trigger_scraping_run(
+        source=payload.source,
+        dag_id=payload.dag_id,
+        extra_conf=payload.conf,
     )
+
+    return MessageResponse(message="Scraping DAG triggered", data=data)

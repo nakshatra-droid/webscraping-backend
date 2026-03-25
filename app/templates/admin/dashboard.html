@@ -563,7 +563,14 @@
                     <div class="card">
                         <div class="card-header">
                             <span style="font-weight:600;font-size:15px">Scraper Runs</span>
-                            <button class="btn btn-primary btn-sm" onclick="triggerScraping()">▶ Run Scraping</button>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <select id="scraping-source" class="form-control" style="width:120px">
+                                    <option value="AMAZON" selected>AMAZON</option>
+                                    <option value="FLIPKART">FLIPKART</option>
+                                </select>
+                                <button class="btn btn-primary btn-sm" onclick="triggerScraping()">▶ Run
+                                    Scraping</button>
+                            </div>
                         </div>
                         <div class="card-body" style="padding:0">
                             <div class="table-wrap">
@@ -1221,11 +1228,11 @@
         async function triggerEmbedding() {
             const btn = document.getElementById('embed-btn');
             btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Starting…';
-            const res = await apiFetch('/admin/embeddings/run', { method: 'POST' });
+            const res = await apiFetch('/admin/embeddings/run', { method: 'POST', body: JSON.stringify({}) });
             btn.disabled = false; btn.innerHTML = '▶ Run Embedding Pipeline';
             if (res?.ok) {
                 const json = await res.json();
-                document.getElementById('embed-task-id').textContent = json.data?.status || 'queued';
+                document.getElementById('embed-task-id').textContent = json.data?.dag_run_id || json.data?.status || 'queued';
                 document.getElementById('embed-result').style.display = 'block';
                 showToast('Embedding pipeline triggered!', 'success');
                 await loadEmbeddingMetadata(1);
@@ -1236,9 +1243,15 @@
         }
 
         async function triggerScraping() {
-            const res = await apiFetch('/admin/scraper-runs/run', { method: 'POST' });
+            const source = document.getElementById('scraping-source')?.value || 'AMAZON';
+            const res = await apiFetch('/admin/scraper-runs/run', {
+                method: 'POST',
+                body: JSON.stringify({ source })
+            });
             if (res?.ok) {
-                showToast('Scraping trigger accepted!', 'success');
+                const json = await res.json();
+                const dagRun = json?.data?.dag_run_id ? ` (${json.data.dag_run_id})` : '';
+                showToast(`Scraping DAG triggered for ${source}${dagRun}`, 'success');
                 await loadScraperRuns(1);
             } else {
                 const e = await res?.json();

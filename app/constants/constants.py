@@ -85,3 +85,22 @@ class ActivityTypes:
     PRODUCT_NOT_FOUND = "PRODUCT_NOT_FOUND"
     FIELD_MISSING = "FIELD_MISSING"
     ALREADY_EXIST = "ALREADY_EXIST"
+
+
+class AirflowConstants:
+    """Constants for Airflow DAG orchestration."""
+
+    SCRAPER_DAG_ID = "unified_pipeline_dag"
+    EMBEDDING_DAG_ID = "embedding_pipeline_dag"
+
+
+class AirflowStateMap:
+    """Map Airflow DAG run states to UI-friendly values."""
+
+    MAP = {
+        "queued": "pending",
+        "running": "running",
+        "success": "done",
+        "failed": "failed",
+        "upstream_failed": "failed",
+    }

@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, Query
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.middleware.auth import AuthMiddleware
 from app.models.users import Users
 from app.schemas.common_schemas import MessageResponse, PaginatedResponse
 from app.database.database import get_db
 from app.services.embedding_metadata_service import EmbeddingMetadataService
+from app.services.airflow_service import AirflowService
 from app.schemas.embedding_metadata_schemas import EmbeddingMetadataResponse
+from app.schemas.airflow_schemas import EmbeddingDagTriggerRequest
 from app.constants.constants import PaginationConstants
 
 router = APIRouter()
@@ -55,10 +58,19 @@ async def get_all_embedding_metadata(
     },
 )
 async def trigger_embedding_run(
+    payload: Optional[EmbeddingDagTriggerRequest] = None,
     current_user: Users = Depends(AuthMiddleware.get_current_admin),
 ) -> MessageResponse:
-    """Placeholder to trigger the Airflow embedding DAG."""
+    """Trigger the Airflow embedding DAG."""
+
+    service = AirflowService()
+    payload = payload or EmbeddingDagTriggerRequest()
+    data = await service.trigger_embedding_run(
+        dag_id=payload.dag_id,
+        extra_conf=payload.conf,
+    )
+
     return MessageResponse(
-        message="Embedding trigger accepted",
-        data={"status": "queued"},
+        message="Embedding DAG triggered",
+        data=data,
     )
