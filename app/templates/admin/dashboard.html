@@ -570,6 +570,8 @@
                                 </select>
                                 <button class="btn btn-primary btn-sm" onclick="triggerScraping()">▶ Run
                                     Scraping</button>
+                                <button class="btn btn-secondary btn-sm" onclick="triggerFallbackScraping()">↺ Run
+                                    Fallback</button>
                             </div>
                         </div>
                         <div class="card-body" style="padding:0">
@@ -1256,6 +1258,23 @@
             } else {
                 const e = await res?.json();
                 showToast(e?.error?.message || 'Failed to trigger scraping', 'error');
+            }
+        }
+
+        async function triggerFallbackScraping() {
+            const source = document.getElementById('scraping-source')?.value || 'AMAZON';
+            const res = await apiFetch('/admin/scraper-runs/run', {
+                method: 'POST',
+                body: JSON.stringify({ source, dag_id: 'fallback_scraper_dag' })
+            });
+            if (res?.ok) {
+                const json = await res.json();
+                const dagRun = json?.data?.dag_run_id ? ` (${json.data.dag_run_id})` : '';
+                showToast(`Fallback DAG triggered for ${source}${dagRun}`, 'success');
+                await loadScraperRuns(1);
+            } else {
+                const e = await res?.json();
+                showToast(e?.error?.message || 'Failed to trigger fallback scraping', 'error');
             }
         }
 
