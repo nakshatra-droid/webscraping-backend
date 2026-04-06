@@ -8,6 +8,7 @@ from app.data_controllers.chat_history_data_controller import ChatHistoryDataCon
 from app.database.database import AsyncSessionLocal
 from app.models.chat_message import ChatSenderEnum
 from app.utils.embedding_utils import EmbeddingUtils
+from app.utils.query_filter_utils import QueryFilterUtils
 
 
 class ChatService:
@@ -40,10 +41,11 @@ class ChatService:
         self, query: str, top_k: int = ChatConstants.TOP_K_RESULTS
     ) -> list[dict]:
 
-        filters = {}
+        
+        cleaned_query, filters = QueryFilterUtils.parse_query_filters(query)
         model = EmbeddingUtils.get_embedding_model()
 
-        encode_text = query
+        encode_text = cleaned_query if cleaned_query else query
 
         query_vector = model.encode(encode_text).tolist()
 
